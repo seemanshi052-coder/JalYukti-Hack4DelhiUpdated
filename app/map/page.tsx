@@ -1,9 +1,12 @@
-// app/ward-risk-map/page.tsx (or your correct route path)
+// app/map/page.tsx  (server component)
 
-import WardRiskMapPageClient from "./WardRiskMapPageClient";
+import dynamic from "next/dynamic";
+
+const WardRiskMapPageClient = dynamic(
+  () => import("./WardRiskMapPageClient"),
+  { ssr: false } // disable SSR to avoid window errors in build
+);
 
 export default function WardRiskMapPage() {
-  // Do NOT use window here
-  // No 'use client' here
   return <WardRiskMapPageClient />;
 }
