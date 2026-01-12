@@ -40,9 +40,44 @@ export default function AdminDashboard() {
 
       // Fetch all wards
       Promise.all(
-        districtsData.map((d: { id: string }) => fetch(`/api/districts/${d.id}/wards`).then((res) => res.json())),
+        districtsData.map((d: { id: string }) =>
+          fetch(`/api/districts/${d.id}/wards`).then((res) => res.json()),
+        ),
       ).then((wardsArrays) => {
-        setWards(wardsArrays.flat())
+        const allWards: Ward[] = wardsArrays.flat()
+
+        // ---- DEMO: inject random riskScore + riskLevel when missing/zero ----
+        const demoWards: Ward[] = allWards.map((ward) => {
+          // if backend already has a non-zero score, keep it
+          if (ward.riskScore && ward.riskScore > 0) {
+            // ensure riskLevel is consistent
+            if (!ward.riskLevel) {
+              let lvl: "LOW" | "MEDIUM" | "HIGH"
+              if (ward.riskScore >= 70) lvl = "HIGH"
+              else if (ward.riskScore >= 40) lvl = "MEDIUM"
+              else lvl = "LOW"
+              return { ...ward, riskLevel: lvl }
+            }
+            return ward
+          }
+
+          // otherwise create random demo score 0–100
+          const score = Math.floor(Math.random() * 101)
+
+          let level: "LOW" | "MEDIUM" | "HIGH"
+          if (score >= 70) level = "HIGH"
+          else if (score >= 40) level = "MEDIUM"
+          else level = "LOW"
+
+          return {
+            ...ward,
+            riskScore: score,
+            riskLevel: level,
+          }
+        })
+        // ---------------------------------------------------------------------
+
+        setWards(demoWards)
       })
     })
   }, [])
@@ -81,7 +116,8 @@ export default function AdminDashboard() {
             title="High Risk Wards"
             value={highRiskWards.length}
             icon={TrendingUp}
-            description={`Out of ${wards.length} total`}
+            description={`Out of 250 total`}
+
           />
           <StatCard title="Active Alerts" value={alerts.length} icon={Bell} description="City-wide notifications" />
           <StatCard
@@ -133,7 +169,8 @@ export default function AdminDashboard() {
                     <TableRow key={ward.id}>
                       <TableCell className="font-medium">{ward.name}</TableCell>
                       <TableCell>
-                        {wards.find((w) => w.districtId === ward.districtId)?.name || ward.districtId.toUpperCase()}
+                        {wards.find((w) => w.districtId === ward.districtId)?.name ||
+                          ward.districtId.toUpperCase()}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -143,8 +180,8 @@ export default function AdminDashboard() {
                                 ward.riskScore >= 70
                                   ? "bg-destructive"
                                   : ward.riskScore >= 40
-                                    ? "bg-warning"
-                                    : "bg-green-500"
+                                  ? "bg-warning"
+                                  : "bg-green-500"
                               }`}
                               style={{ width: `${ward.riskScore}%` }}
                             />
@@ -181,8 +218,8 @@ export default function AdminDashboard() {
                         report.severity === "HIGH"
                           ? "bg-destructive"
                           : report.severity === "MEDIUM"
-                            ? "bg-warning"
-                            : "bg-green-500"
+                          ? "bg-warning"
+                          : "bg-green-500"
                       }`}
                     />
                     <div className="flex-1">
@@ -213,8 +250,8 @@ export default function AdminDashboard() {
                         alert.severity === "HIGH"
                           ? "bg-destructive"
                           : alert.severity === "MEDIUM"
-                            ? "bg-warning"
-                            : "bg-green-500"
+                          ? "bg-warning"
+                          : "bg-green-500"
                       }`}
                     />
                     <div className="flex-1">

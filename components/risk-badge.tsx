@@ -8,9 +8,10 @@ interface RiskBadgeProps {
 
 export function RiskBadge({ level, className }: RiskBadgeProps) {
   const variants = {
-    LOW: "bg-green-500/10 text-green-500 hover:bg-green-500/20 ring-1 ring-green-500/20",
-    MEDIUM: "bg-warning/10 text-warning-foreground hover:bg-warning/20 ring-1 ring-warning/20",
-    HIGH: "bg-destructive/10 text-destructive hover:bg-destructive/20 ring-1 ring-destructive/20",
+    LOW: "bg-green-500/20 text-green-200 hover:bg-green-500/30 ring-1 ring-green-400",
+    MEDIUM:
+      "bg-orange-500/30 text-orange-100 hover:bg-orange-500/40 ring-1 ring-orange-400",
+    HIGH: "bg-red-500/30 text-red-100 hover:bg-red-500/40 ring-1 ring-red-400",
   }
 
   return (

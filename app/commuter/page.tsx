@@ -26,6 +26,10 @@ export default function CommuterDashboard() {
   const [routeAlerts, setRouteAlerts] = useState<Alert[]>([])
   const [allWards, setAllWards] = useState<Ward[]>([])
 
+  // --- demo state just for prototype values ---
+  const [demoStartRisk, setDemoStartRisk] = useState<number | null>(null)
+  const [demoEndRisk, setDemoEndRisk] = useState<number | null>(null)
+
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "COMMUTER")) {
       router.push("/login")
@@ -53,33 +57,61 @@ export default function CommuterDashboard() {
     })
   }, [])
 
+  // whenever both wards are selected, prepare demo scores (for prototype only)
+  useEffect(() => {
+    if (startWard && endWard) {
+      const s = Math.floor(Math.random() * 60)      // 0–59
+      const e = Math.floor(Math.random() * 60)      // 0–59
+      setDemoStartRisk(s)
+      setDemoEndRisk(e)
+    }
+  }, [startWard, endWard])
+
   useEffect(() => {
     if (startWard) {
       const ward = allWards.find((w) => w.id === startWard)
-      setStartWardData(ward || null)
+      // if backend has no riskScore, inject demo one for prototype
+      if (ward && (ward.riskScore === 0 || ward.riskScore == null) && demoStartRisk != null) {
+        setStartWardData({ ...ward, riskScore: demoStartRisk })
+      } else {
+        setStartWardData(ward || null)
+      }
     }
-  }, [startWard, allWards])
+  }, [startWard, allWards, demoStartRisk])
 
   useEffect(() => {
     if (endWard) {
       const ward = allWards.find((w) => w.id === endWard)
-      setEndWardData(ward || null)
+      if (ward && (ward.riskScore === 0 || ward.riskScore == null) && demoEndRisk != null) {
+        setEndWardData({ ...ward, riskScore: demoEndRisk })
+      } else {
+        setEndWardData(ward || null)
+      }
     }
-  }, [endWard, allWards])
+  }, [endWard, allWards, demoEndRisk])
 
   if (isLoading || !user) {
     return null
+  }
+
+  // helper to map numeric score to level
+  const scoreToLevel = (score: number): "LOW" | "MEDIUM" | "HIGH" => {
+    if (score >= 70) return "HIGH"
+    if (score >= 40) return "MEDIUM"
+    return "LOW"
   }
 
   // Calculate route risk
   const calculateRouteRisk = () => {
     if (!startWardData || !endWardData) return null
 
-    const avgRisk = Math.round((startWardData.riskScore + endWardData.riskScore) / 2)
-    const maxRisk = Math.max(startWardData.riskScore, endWardData.riskScore)
+    const startScore = startWardData.riskScore
+    const endScore = endWardData.riskScore
 
-    const riskLevel: "LOW" | "MEDIUM" | "HIGH" =
-      maxRisk >= 70 ? "HIGH" : maxRisk >= 40 ? "MEDIUM" : "LOW"
+    const avgRisk = Math.round((startScore + endScore) / 2)
+    const maxRisk = Math.max(startScore, endScore)
+
+    const riskLevel: "LOW" | "MEDIUM" | "HIGH" = scoreToLevel(maxRisk)
 
     return { avgRisk, maxRisk, riskLevel }
   }
@@ -90,6 +122,31 @@ export default function CommuterDashboard() {
   const relevantAlerts = routeAlerts.filter(
     (alert) => alert.wardId === startWard || alert.wardId === endWard || !alert.wardId,
   )
+
+  // Decide message block color/text from routeRisk
+  let routeBlock =
+    routeRisk?.riskLevel === "HIGH"
+      ? {
+          className: "rounded-lg bg-destructive/10 p-4 ring-1 ring-destructive/20",
+          title: "High Risk Route",
+          text:
+            "This route passes through high-risk areas. Consider alternative routes or delay your journey if possible.",
+        }
+      : routeRisk?.riskLevel === "MEDIUM"
+      ? {
+          className: "rounded-lg bg-warning/10 p-4 ring-1 ring-warning/20",
+          title: "Moderate Risk Route",
+          text:
+            "Some water-logging reported along this route. Proceed with caution and allow extra travel time.",
+        }
+      : routeRisk
+      ? {
+          className: "rounded-lg bg-green-500/10 p-4 ring-1 ring-green-500/20",
+          title: "Safe Route",
+          text:
+            "This route has low water-logging risk. Normal travel conditions expected.",
+        }
+      : null
 
   return (
     <DashboardLayout>
@@ -192,13 +249,13 @@ export default function CommuterDashboard() {
               />
               <StatCard
                 title="Starting Point"
-                value={<RiskBadge level={startWardData.riskLevel} />}
+                value={<RiskBadge level={scoreToLevel(startWardData.riskScore)} />}
                 icon={MapPin}
                 description={`${startWardData.name}: ${startWardData.riskScore}/100`}
               />
               <StatCard
                 title="Destination"
-                value={<RiskBadge level={endWardData.riskLevel} />}
+                value={<RiskBadge level={scoreToLevel(endWardData.riskScore)} />}
                 icon={MapPin}
                 description={`${endWardData.name}: ${endWardData.riskScore}/100`}
               />
@@ -208,14 +265,16 @@ export default function CommuterDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Route Analysis</CardTitle>
-                <CardDescription>Water-logging risk assessment for your journey</CardDescription>
+                <CardDescription>
+                  Water-logging risk assessment for your journey
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-lg border border-border p-4">
                     <div className="mb-2 flex items-center justify-between">
                       <h4 className="font-medium">Starting Point</h4>
-                      <RiskBadge level={startWardData.riskLevel} />
+                      <RiskBadge level={scoreToLevel(startWardData.riskScore)} />
                     </div>
                     <p className="text-sm text-muted-foreground">{startWardData.name}</p>
                     <div className="mt-2 flex items-center gap-2">
@@ -229,7 +288,7 @@ export default function CommuterDashboard() {
                   <div className="rounded-lg border border-border p-4">
                     <div className="mb-2 flex items-center justify-between">
                       <h4 className="font-medium">Destination</h4>
-                      <RiskBadge level={endWardData.riskLevel} />
+                      <RiskBadge level={scoreToLevel(endWardData.riskScore)} />
                     </div>
                     <p className="text-sm text-muted-foreground">{endWardData.name}</p>
                     <div className="mt-2 flex items-center gap-2">
@@ -241,34 +300,10 @@ export default function CommuterDashboard() {
                   </div>
                 </div>
 
-                {routeRisk.riskLevel === "HIGH" && (
-                  <div className="rounded-lg bg-destructive/10 p-4 ring-1 ring-destructive/20">
-                    <h4 className="mb-1 font-medium text-destructive">High Risk Route</h4>
-                    <p className="text-sm text-destructive/80">
-                      This route passes through high-risk areas. Consider alternative routes or delay
-                      your journey if possible.
-                    </p>
-                  </div>
-                )}
-
-                {routeRisk.riskLevel === "MEDIUM" && (
-                  <div className="rounded-lg bg-warning/10 p-4 ring-1 ring-warning/20">
-                    <h4 className="mb-1 font-medium text-warning-foreground">
-                      Moderate Risk Route
-                    </h4>
-                    <p className="text-sm text-warning-foreground/80">
-                      Some water-logging reported along this route. Proceed with caution and allow
-                      extra travel time.
-                    </p>
-                  </div>
-                )}
-
-                {routeRisk.riskLevel === "LOW" && (
-                  <div className="rounded-lg bg-green-500/10 p-4 ring-1 ring-green-500/20">
-                    <h4 className="mb-1 font-medium text-green-500">Safe Route</h4>
-                    <p className="text-sm text-green-500/80">
-                      This route has low water-logging risk. Normal travel conditions expected.
-                    </p>
+                {routeBlock && (
+                  <div className={routeBlock.className}>
+                    <h4 className="mb-1 font-medium">{routeBlock.title}</h4>
+                    <p className="text-sm">{routeBlock.text}</p>
                   </div>
                 )}
               </CardContent>
