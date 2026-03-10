@@ -1,6 +1,9 @@
 # JalYukti - Intelligent Water-Logging Management System
 Try it outt
-jalyukti.netlify.app
+
+https://jalyukti.netlify.app
+
+
 A comprehensive water-logging management application for Delhi NCR, built for the Hack4Delhi hackathon.
 
 ## Features
